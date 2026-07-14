@@ -7,9 +7,11 @@
 # 각 실행은 k6 의 임계값(SLO) 통과 여부를 종료 코드로 알려준다.
 # 처음으로 실패한 레벨이 곧 '동시 사용자 한계'다.
 
+# -Levels 는 쉼표로 구분한 문자열로 받는다. powershell -File 로 부르면 배열 인자가
+# 문자열 하나로 뭉개져 들어오기 때문이다("5,10,15" -> 51015).
 param(
     [string]$Scenario = "10_interview.js",
-    [int[]]$Levels = @(5),
+    [string]$Levels = "5",
     [hashtable]$Env = @{}
 )
 
@@ -22,7 +24,7 @@ New-Item -ItemType Directory -Force $out | Out-Null
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $name = [System.IO.Path]::GetFileNameWithoutExtension($Scenario)
 
-foreach ($vus in $Levels) {
+foreach ($vus in ($Levels -split ',' | ForEach-Object { [int]$_.Trim() })) {
     $summary = Join-Path $out "$name-vus$vus-$stamp.json"
     Write-Host "`n=== $Scenario | 동시 $vus 명 ===" -ForegroundColor Cyan
 
