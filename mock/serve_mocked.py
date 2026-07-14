@@ -38,6 +38,25 @@ from app.services.interview.next_question import NextQuestion, NextQuestionAgent
 from app.services.text.answer_generator import ModelAnswerGenerator
 from app.services.text.evaluator import AnswerEvaluator
 
+# 백그라운드 임베딩(유사도)을 어느 장치에 올릴지. 기본은 앱 그대로(=GPU 자동 선택).
+#
+# 앱은 SentenceTransformer 에 device 를 주지 않아 모델이 알아서 cuda:0 를 잡는다
+# (기동 로그: "No device provided, using cuda:0"). 그래서 사용자를 기다리게 하는
+# SenseVoice STT 와 백그라운드 임베딩이 GPU 한 장을 두고 다툰다.
+# EMBED_DEVICE=cpu 로 띄우면 그 경합을 없앤 상태를 잴 수 있다.
+EMBED_DEVICE = os.getenv("EMBED_DEVICE", "").strip()
+
+if EMBED_DEVICE:
+    from sentence_transformers import SentenceTransformer as _RealST
+
+    import app.services.text.scorer as scorer
+
+    def _st_on_device(name, **kwargs):
+        kwargs["device"] = EMBED_DEVICE
+        return _RealST(name, **kwargs)
+
+    scorer.SentenceTransformer = _st_on_device
+
 FAKE_QUESTION = "방금 말씀하신 스레드풀 조정에서, 왜 하필 그 크기를 골랐는지 근거를 설명해주시겠어요?"
 FAKE_MODEL_ANSWER = (
     "병목 구간을 먼저 측정해 어디에서 시간이 쓰이는지 확인하고, "
@@ -88,5 +107,8 @@ if __name__ == "__main__":
 
     from app.main import app
 
-    print(f"[mock] LLM 호출을 {DELAY}초 고정 지연으로 대체했다. STT/ffmpeg/영상은 그대로 돈다.")
+    print(
+        f"[mock] LLM 호출을 {DELAY}초 고정 지연으로 대체했다. STT/ffmpeg/영상은 그대로 돈다. "
+        f"| 임베딩 장치: {EMBED_DEVICE or '앱 기본값(GPU 자동)'}"
+    )
     uvicorn.run(app, host="0.0.0.0", port=8000)
