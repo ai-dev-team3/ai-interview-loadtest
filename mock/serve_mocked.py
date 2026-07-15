@@ -102,13 +102,31 @@ ModelAnswerGenerator.agenerate = _amodel_answer
 AnswerEvaluator.evaluate = _evaluate
 AnswerEvaluator.aevaluate = _aevaluate
 
+# STT 를 즉시 반환으로 스텁한다 (STUB_STT=1). "STT 병목을 뺀 다음 벽이 어디냐"를 잴 때 쓴다.
+# ffmpeg 변환은 그대로 두고(파일이 있어야 백그라운드 pitch 가 wav 를 읽는다), GPU STT 만 없앤다.
+STUB_STT = os.getenv("STUB_STT", "") == "1"
+if STUB_STT:
+    from app.services.stt.sensevoice import SenseVoiceClient
+
+    _FIXED_TEXT = (
+        "네 제가 맡았던 프로젝트에 대해 말씀드리겠습니다. 저는 음성 처리 파이프라인을 담당했고, "
+        "동시 요청이 몰릴 때 느려지는 문제를 측정으로 좁혀 스레드풀을 조정해 개선했습니다."
+    )
+
+    def _fake_transcribe(self, wav_path):
+        # 실제 발화 구간과 비슷하게 채운다 (말속도 계산이 0으로 죽지 않게).
+        return _FIXED_TEXT, {"segments": [{"text": _FIXED_TEXT, "start": 0, "end": 70000}]}
+
+    SenseVoiceClient.transcribe = _fake_transcribe
+
 if __name__ == "__main__":
     import uvicorn
 
     from app.main import app
 
+    stt = "스텁(즉시 반환)" if STUB_STT else "실제 GPU"
     print(
-        f"[mock] LLM 호출을 {DELAY}초 고정 지연으로 대체했다. STT/ffmpeg/영상은 그대로 돈다. "
-        f"| 임베딩 장치: {EMBED_DEVICE or '앱 기본값(GPU 자동)'}"
+        f"[mock] LLM={DELAY}초 고정 | STT={stt} | 임베딩 장치={EMBED_DEVICE or '앱 기본값(GPU)'} "
+        f"| ffmpeg/영상/DB 는 그대로"
     )
     uvicorn.run(app, host="0.0.0.0", port=8000)

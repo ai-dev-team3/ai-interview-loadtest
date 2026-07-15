@@ -8,5 +8,6 @@ out/
 bin/
 
 # TTS 로 생성하는 오디오 픽스처. fixtures/make_audio.ps1 로 다시 만들면 된다.
-fixtures/answer.webm
-fixtures/answer.wav
+fixtures/*.webm
+fixtures/*.wav
+fixtures/*.jpg

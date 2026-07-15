@@ -24,7 +24,7 @@ New-Item -ItemType Directory -Force $out | Out-Null
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $name = [System.IO.Path]::GetFileNameWithoutExtension($Scenario)
 
-foreach ($vus in ($Levels -split ',' | ForEach-Object { [int]$_.Trim() })) {
+foreach ($vus in ($Levels -split '[,\s]+' | Where-Object { $_ } | ForEach-Object { [int]$_ })) {
     $summary = Join-Path $out "$name-vus$vus-$stamp.json"
     Write-Host "`n=== $Scenario | 동시 $vus 명 ===" -ForegroundColor Cyan
 
